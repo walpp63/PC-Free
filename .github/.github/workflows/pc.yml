@@ -1,0 +1,40 @@
+name: PC Virtual
+on:
+  workflow_dispatch:
+
+jobs:
+  windows-pc:
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Instalar Tailscale
+        run: |
+          winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements
+        shell: powershell
+
+      - name: Conectar Tailscale
+        env:
+          TAILSCALE_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+        run: |
+          & "C:\Program Files\Tailscale\tailscale.exe" up --authkey="$env:TAILSCALE_KEY" --hostname="gh-pc-${{ github.run_id }}" --accept-routes
+          Start-Sleep -Seconds 5
+          & "C:\Program Files\Tailscale\tailscale.exe" ip -4
+        shell: powershell
+
+      - name: Ativar RDP e criar usuário
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          net user Runner123 P@ssword123! /add
+          net localgroup administrators Runner123 /add
+        shell: powershell
+
+      - name: Manter PC ativo
+        run: |
+          Write-Host "PC VIRTUAL PRONTO!"
+          Write-Host "Usuario: Runner123 | Senha: P@ssword123!"
+          while ($true) { Start-Sleep -Seconds 60 }
+        shell: powershell
+        
